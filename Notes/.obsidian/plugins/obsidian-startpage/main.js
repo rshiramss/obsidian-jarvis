@@ -502,22 +502,48 @@ class StartPageView extends ItemView {
     async saveRecording(audioBlob) {
         const timestamp = Date.now();
         const fileName = `Recording-${timestamp}.wav`;
-
-        // Convert WebM to WAV
-        const wavBlob = await this.convertToWav(audioBlob);
-        const arrayBuffer = await wavBlob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        // Create a new note with the recording
         const noteFileName = `Recording-${timestamp}.md`;
-        const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-        const content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n[${fileName}](${fileName})`;
 
-        // Save audio file
-        await this.app.vault.createBinary(fileName, uint8Array);
+        try {
+            // Convert WebM to 16 kHz mono WAV
+            const wavBlob = await this.convertToWav(audioBlob);
+            const arrayBuffer = await wavBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-        // Save markdown note
-        await this.app.vault.create(noteFileName, content);
+            // Save audio file first
+            await this.app.vault.createBinary(fileName, uint8Array);
+
+            const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+
+            // Attempt transcription
+            let transcriptText = '';
+            let transcriptionError = null;
+
+            try {
+                transcriptText = await this.transcribeAudio(fileName);
+            } catch (error) {
+                console.error('Transcription failed:', error);
+                transcriptionError = error.message;
+            }
+
+            // Create note content
+            let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
+
+            if (transcriptText) {
+                content += `## Transcript\n\n${transcriptText}\n\n`;
+            } else if (transcriptionError) {
+                content += `## Transcript\n\n*Transcription failed: ${transcriptionError}*\n\n`;
+            }
+
+            content += `## Audio\n\n[${fileName}](${fileName})`;
+
+            // Save markdown note
+            await this.app.vault.create(noteFileName, content);
+
+        } catch (error) {
+            console.error('Failed to save recording:', error);
+            alert('Failed to save recording: ' + error.message);
+        }
     }
 
     async convertToWav(audioBlob) {
@@ -526,9 +552,30 @@ class StartPageView extends ItemView {
         const arrayBuffer = await audioBlob.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
+        // Resample to 16 kHz and convert to mono if needed
+        const resampledBuffer = await this.resampleAudioBuffer(audioBuffer, 16000);
+
         // Convert AudioBuffer to WAV format
-        const wavBuffer = this.audioBufferToWav(audioBuffer);
+        const wavBuffer = this.audioBufferToWav(resampledBuffer);
         return new Blob([wavBuffer], { type: 'audio/wav' });
+    }
+
+    async resampleAudioBuffer(audioBuffer, targetSampleRate) {
+        // Create offline audio context for resampling
+        const offlineContext = new OfflineAudioContext(
+            1, // mono
+            audioBuffer.duration * targetSampleRate,
+            targetSampleRate
+        );
+
+        // Create buffer source
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineContext.destination);
+        source.start(0);
+
+        // Render the resampled audio
+        return await offlineContext.startRendering();
     }
 
     audioBufferToWav(audioBuffer) {
@@ -583,6 +630,79 @@ class StartPageView extends ItemView {
         }
 
         return buffer;
+    }
+
+    async transcribeAudio(fileName) {
+        // Import Node.js modules for executing whisper-cli
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        const path = require('path');
+        const fs = require('fs');
+
+        // Get the vault path and construct full audio file path
+        const vaultPath = this.app.vault.adapter.basePath;
+        const audioFilePath = path.join(vaultPath, fileName);
+
+        // Whisper model path - check setting first, then default locations
+        const homeDir = require('os').homedir();
+        let modelPath = null;
+
+        // Check if user provided a custom path
+        if (this.plugin.settings.whisperModelPath && fs.existsSync(this.plugin.settings.whisperModelPath)) {
+            modelPath = this.plugin.settings.whisperModelPath;
+        } else {
+            // Auto-detect from common locations
+            const possibleModelPaths = [
+                path.join(homeDir, 'Desktop', 'whisper_test', 'whisper.cpp', 'models', 'ggml-base.en.bin'),
+                path.join(homeDir, 'whisper.cpp', 'models', 'ggml-base.en.bin'),
+                '/usr/local/share/whisper/models/ggml-base.en.bin'
+            ];
+
+            for (const testPath of possibleModelPaths) {
+                if (fs.existsSync(testPath)) {
+                    modelPath = testPath;
+                    break;
+                }
+            }
+        }
+
+        if (!modelPath) {
+            throw new Error('Whisper model not found. Please set the model path in settings or install ggml-base.en.bin.');
+        }
+
+        // Construct whisper command
+        const whisperCommand = `whisper "${audioFilePath}" -m "${modelPath}" -f "${audioFilePath}" -otxt`;
+
+        try {
+            // Execute whisper transcription
+            const { stdout, stderr } = await execAsync(whisperCommand, {
+                timeout: 300000, // 5 minute timeout
+                maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+            });
+
+            // Read the output text file
+            const txtFilePath = audioFilePath.replace('.wav', '.txt');
+            if (fs.existsSync(txtFilePath)) {
+                const transcript = fs.readFileSync(txtFilePath, 'utf-8').trim();
+                // Clean up the txt file
+                fs.unlinkSync(txtFilePath);
+                return transcript;
+            }
+
+            // If no txt file, try parsing stdout
+            if (stdout) {
+                return stdout.trim();
+            }
+
+            throw new Error('No transcription output generated');
+
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                throw new Error('Whisper CLI not found. Please install whisper.cpp');
+            }
+            throw error;
+        }
     }
 
     getPreviewText(content) {
@@ -1603,6 +1723,18 @@ class StartPageSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             });
+
+        new Setting(containerEl)
+            .setName('Whisper model path')
+            .setDesc('Path to Whisper model file (ggml-base.en.bin). Leave empty to auto-detect.')
+            .addText(text => {
+                text.setPlaceholder('/path/to/whisper.cpp/models/ggml-base.en.bin');
+                text.setValue(this.plugin.settings.whisperModelPath);
+                text.onChange(async (value) => {
+                    this.plugin.settings.whisperModelPath = value;
+                    await this.plugin.saveSettings();
+                });
+            });
     }
 
     refreshStartPage() {
@@ -1618,7 +1750,8 @@ const DEFAULT_SETTINGS = {
     recentNotesLimit: 20,
     replaceNewTab: true,
     calendarEvents: [],
-    trashedNotes: []
+    trashedNotes: [],
+    whisperModelPath: ''
 };
 
 class StartPagePlugin extends Plugin {
