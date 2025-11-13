@@ -32,6 +32,9 @@ Notes/.obsidian/plugins/*/backup/
 *.swo
 *~
 
+# Script files
+*.sh
+
 # Keep plugin code
 !Notes/.obsidian/plugins/*/main.js
 !Notes/.obsidian/plugins/*/manifest.json
