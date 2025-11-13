@@ -579,13 +579,21 @@ class StartPageView extends ItemView {
 
                     transcriptContent += `---\n\nAudio: [${fileName}](${fileName})`;
 
-                    // Save transcript note
-                    await this.app.vault.create(transcriptFileName, transcriptContent);
+                    // Save transcript note and ensure it's fully written
+                    const transcriptFile = await this.app.vault.create(transcriptFileName, transcriptContent);
+
+                    // Force Obsidian to recognize the file by reading it back
+                    if (transcriptFile) {
+                        await this.app.vault.read(transcriptFile);
+                    }
                 } catch (transcriptError) {
                     console.error('Failed to create transcript note:', transcriptError);
                     // Continue anyway - we'll still create the main recording note
                 }
             }
+
+            // Small delay to ensure transcript file is fully written to disk
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Create main recording note with link to transcript
             let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
