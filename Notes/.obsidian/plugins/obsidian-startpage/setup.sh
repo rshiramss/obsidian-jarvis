@@ -25,17 +25,17 @@ else
     echo "✅ Model already exists"
 fi
 
-# Check if whisper binary exists
-WHISPER_BIN="$BIN_DIR/whisper"
-if [ ! -f "$WHISPER_BIN" ]; then
+# Check if whisper-cli binary exists
+WHISPER_CLI="$BIN_DIR/whisper-cli"
+if [ ! -f "$WHISPER_CLI" ]; then
     echo "⚠️  Whisper binary not found"
     echo "Please compile whisper.cpp and copy the binary to:"
-    echo "  $BIN_DIR/whisper"
+    echo "  $BIN_DIR/whisper-cli"
     echo ""
     echo "Or download a pre-compiled binary for your platform"
 else
     echo "✅ Whisper binary found"
-    chmod +x "$WHISPER_BIN"
+    chmod +x "$WHISPER_CLI"
 fi
 
 echo ""

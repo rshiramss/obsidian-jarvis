@@ -672,12 +672,15 @@ class StartPageView extends ItemView {
 
         // Get the plugin directory path
         const pluginDir = path.join(vaultPath, '.obsidian', 'plugins', 'obsidian-startpage');
+        const bundledWhisperCli = path.join(pluginDir, 'bin', 'whisper-cli');
         const bundledWhisperBinary = path.join(pluginDir, 'bin', 'whisper');
         const bundledModelPath = path.join(pluginDir, 'models', 'ggml-base.en.bin');
 
         // Whisper binary path - use bundled first, then system
-        let whisperBinary = 'whisper'; // Default to system whisper
-        if (fs.existsSync(bundledWhisperBinary)) {
+        let whisperBinary = 'whisper-cli'; // Default to system whisper-cli
+        if (fs.existsSync(bundledWhisperCli)) {
+            whisperBinary = bundledWhisperCli;
+        } else if (fs.existsSync(bundledWhisperBinary)) {
             whisperBinary = bundledWhisperBinary;
         }
 
@@ -714,7 +717,7 @@ class StartPageView extends ItemView {
         }
 
         // Construct whisper command
-        const whisperCommand = `"${whisperBinary}" "${audioFilePath}" -m "${modelPath}" -f "${audioFilePath}" -otxt`;
+        const whisperCommand = `"${whisperBinary}" -m "${modelPath}" -f "${audioFilePath}" -otxt`;
 
         try {
             // Execute whisper transcription
