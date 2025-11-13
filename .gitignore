@@ -3,6 +3,7 @@ Notes/*.md
 Notes/*.canvas
 Notes/*.webm
 Notes/*.wav
+Notes/*.wav.txt
 
 # Ignore transcript notes
 Notes/.transcripts/
