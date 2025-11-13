@@ -28,11 +28,26 @@ class StartPageView extends ItemView {
 
         await this.renderContent();
 
+        // Flag to prevent re-render during manual operations
+        this.skipNextRender = false;
+
         // Listen for file changes
-        this.registerEvent(this.app.vault.on('modify', () => this.renderContent()));
-        this.registerEvent(this.app.vault.on('create', () => this.renderContent()));
-        this.registerEvent(this.app.vault.on('delete', () => this.renderContent()));
-        this.registerEvent(this.app.vault.on('rename', () => this.renderContent()));
+        this.registerEvent(this.app.vault.on('modify', () => {
+            if (!this.skipNextRender) this.renderContent();
+            this.skipNextRender = false;
+        }));
+        this.registerEvent(this.app.vault.on('create', () => {
+            if (!this.skipNextRender) this.renderContent();
+            this.skipNextRender = false;
+        }));
+        this.registerEvent(this.app.vault.on('delete', () => {
+            if (!this.skipNextRender) this.renderContent();
+            this.skipNextRender = false;
+        }));
+        this.registerEvent(this.app.vault.on('rename', () => {
+            if (!this.skipNextRender) this.renderContent();
+            this.skipNextRender = false;
+        }));
     }
 
     hideSidebars() {
@@ -249,7 +264,7 @@ class StartPageView extends ItemView {
         const deleteBtn = btnContainer.createEl('button', { text: '×', cls: 'delete-note-btn' });
         deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            await this.deleteNote(file, contentArea, selectedTag);
+            await this.deleteNote(file, contentArea, selectedTag, card);
         });
 
         // Display existing tags
@@ -276,7 +291,7 @@ class StartPageView extends ItemView {
         return card;
     }
 
-    async deleteNote(file, contentArea, selectedTag) {
+    async deleteNote(file, contentArea, selectedTag, cardElement) {
         try {
             // Read file content before deleting
             const content = await this.app.vault.cachedRead(file);
@@ -295,13 +310,24 @@ class StartPageView extends ItemView {
             this.plugin.settings.trashedNotes.push(trashEntry);
             await this.plugin.saveSettings();
 
+            // Set flag to prevent automatic re-render on vault delete event
+            this.skipNextRender = true;
+
             // Delete the actual file
             await this.app.vault.delete(file);
 
-            // Refresh the notes view
-            this.renderNotesTab(this.currentContentArea, selectedTag);
+            // Remove the card from DOM smoothly without full re-render
+            if (cardElement) {
+                cardElement.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                cardElement.style.opacity = '0';
+                cardElement.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    cardElement.remove();
+                }, 200);
+            }
         } catch (error) {
             alert('Failed to delete note: ' + error.message);
+            this.skipNextRender = false;
         }
     }
 
