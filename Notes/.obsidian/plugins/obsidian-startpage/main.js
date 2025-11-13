@@ -537,6 +537,12 @@ class StartPageView extends ItemView {
             const arrayBuffer = await wavBlob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
+            // Check if file already exists
+            const existingFile = this.app.vault.getAbstractFileByPath(fileName);
+            if (existingFile) {
+                throw new Error(`File ${fileName} already exists`);
+            }
+
             // Save audio file first
             await this.app.vault.createBinary(fileName, uint8Array);
 
@@ -555,25 +561,30 @@ class StartPageView extends ItemView {
 
             // Create transcript note in hidden folder
             if (transcriptText || transcriptionError) {
-                // Ensure .transcripts folder exists
-                const transcriptsFolder = this.app.vault.getAbstractFileByPath('.transcripts');
-                if (!transcriptsFolder) {
-                    await this.app.vault.createFolder('.transcripts');
+                try {
+                    // Ensure .transcripts folder exists
+                    const transcriptsFolder = this.app.vault.getAbstractFileByPath('.transcripts');
+                    if (!transcriptsFolder) {
+                        await this.app.vault.createFolder('.transcripts');
+                    }
+
+                    // Create transcript note content with link to audio
+                    let transcriptContent = `# Transcript\n\nRecorded: ${new Date().toLocaleString()}\n\n`;
+
+                    if (transcriptText) {
+                        transcriptContent += `${transcriptText}\n\n`;
+                    } else if (transcriptionError) {
+                        transcriptContent += `*Transcription failed: ${transcriptionError}*\n\n`;
+                    }
+
+                    transcriptContent += `---\n\nAudio: [${fileName}](${fileName})`;
+
+                    // Save transcript note
+                    await this.app.vault.create(transcriptFileName, transcriptContent);
+                } catch (transcriptError) {
+                    console.error('Failed to create transcript note:', transcriptError);
+                    // Continue anyway - we'll still create the main recording note
                 }
-
-                // Create transcript note content with link to audio
-                let transcriptContent = `# Transcript\n\nRecorded: ${new Date().toLocaleString()}\n\n`;
-
-                if (transcriptText) {
-                    transcriptContent += `${transcriptText}\n\n`;
-                } else if (transcriptionError) {
-                    transcriptContent += `*Transcription failed: ${transcriptionError}*\n\n`;
-                }
-
-                transcriptContent += `---\n\nAudio: [${fileName}](${fileName})`;
-
-                // Save transcript note
-                await this.app.vault.create(transcriptFileName, transcriptContent);
             }
 
             // Create main recording note with link to transcript
