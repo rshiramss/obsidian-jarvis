@@ -1,0 +1,22 @@
+{
+  "recentNotesLimit": 50,
+  "replaceNewTab": true,
+  "calendarEvents": [
+    {
+      "id": "1762978593994",
+      "title": "Hi",
+      "date": "2025-11-12",
+      "time": null,
+      "description": "Do things",
+      "tags": [
+        "#research"
+      ]
+    }
+  ],
+  "trashedNotes": [],
+  "googleCalendarUrl": "https://calendar.google.com/calendar/embed?src=rishitsai.s%40gmail.com&ctz=America%2FLos_Angeles",
+  "pinnedNotes": [],
+  "recentNotesCount": 20,
+  "enableStartPage": true,
+  "showVaultStats": false
+}
