@@ -529,7 +529,6 @@ class StartPageView extends ItemView {
         const timestamp = Date.now();
         const fileName = `Recording-${timestamp}.wav`;
         const noteFileName = `Recording-${timestamp}.md`;
-        const transcriptFileName = `.transcripts/Transcript-${timestamp}.md`;
 
         try {
             // Convert WebM to 16 kHz mono WAV
@@ -559,52 +558,16 @@ class StartPageView extends ItemView {
                 transcriptionError = error.message;
             }
 
-            // Create transcript note in hidden folder
-            if (transcriptText || transcriptionError) {
-                try {
-                    // Ensure .transcripts folder exists
-                    const transcriptsFolder = this.app.vault.getAbstractFileByPath('.transcripts');
-                    if (!transcriptsFolder) {
-                        await this.app.vault.createFolder('.transcripts');
-                    }
-
-                    // Create transcript note content with link to audio
-                    let transcriptContent = `# Transcript\n\nRecorded: ${new Date().toLocaleString()}\n\n`;
-
-                    if (transcriptText) {
-                        transcriptContent += `${transcriptText}\n\n`;
-                    } else if (transcriptionError) {
-                        transcriptContent += `*Transcription failed: ${transcriptionError}*\n\n`;
-                    }
-
-                    transcriptContent += `---\n\nAudio: [${fileName}](${fileName})`;
-
-                    // Save transcript note and ensure it's fully written
-                    const transcriptFile = await this.app.vault.create(transcriptFileName, transcriptContent);
-
-                    // Force Obsidian to recognize the file by reading it back
-                    if (transcriptFile) {
-                        await this.app.vault.read(transcriptFile);
-                    }
-                } catch (transcriptError) {
-                    console.error('Failed to create transcript note:', transcriptError);
-                    // Continue anyway - we'll still create the main recording note
-                }
-            }
-
-            // Small delay to ensure transcript file is fully written to disk
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Create main recording note with link to transcript
+            // Create note content with transcript at the bottom
             let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
+            content += `**Audio:** [${fileName}](${fileName})\n\n`;
+            content += `---\n\n`;
 
-            if (transcriptText || transcriptionError) {
-                // Extract just the filename without folder path for wiki link
-                const transcriptName = `Transcript-${timestamp}`;
-                content += `**Transcript:** [[${transcriptName}]]\n\n`;
+            if (transcriptText) {
+                content += `## Transcript\n\n${transcriptText}`;
+            } else if (transcriptionError) {
+                content += `## Transcript\n\n*Transcription failed: ${transcriptionError}*`;
             }
-
-            content += `**Audio:** [${fileName}](${fileName})`;
 
             // Save markdown note
             await this.app.vault.create(noteFileName, content);
