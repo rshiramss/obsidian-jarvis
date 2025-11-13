@@ -32,3 +32,9 @@ Notes/.obsidian/plugins/*/backup/
 !Notes/.obsidian/plugins/*/main.js
 !Notes/.obsidian/plugins/*/manifest.json
 !Notes/.obsidian/plugins/*/styles.css
+
+# Keep bundled Whisper resources
+!Notes/.obsidian/plugins/*/bin/
+!Notes/.obsidian/plugins/*/bin/whisper
+!Notes/.obsidian/plugins/*/models/
+!Notes/.obsidian/plugins/*/models/ggml-base.en.bin

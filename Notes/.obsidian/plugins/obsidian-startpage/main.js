@@ -644,15 +644,31 @@ class StartPageView extends ItemView {
         const vaultPath = this.app.vault.adapter.basePath;
         const audioFilePath = path.join(vaultPath, fileName);
 
-        // Whisper model path - check setting first, then default locations
-        const homeDir = require('os').homedir();
+        // Get the plugin directory path
+        const pluginDir = path.join(vaultPath, '.obsidian', 'plugins', 'obsidian-startpage');
+        const bundledWhisperBinary = path.join(pluginDir, 'bin', 'whisper');
+        const bundledModelPath = path.join(pluginDir, 'models', 'ggml-base.en.bin');
+
+        // Whisper binary path - use bundled first, then system
+        let whisperBinary = 'whisper'; // Default to system whisper
+        if (fs.existsSync(bundledWhisperBinary)) {
+            whisperBinary = bundledWhisperBinary;
+        }
+
+        // Whisper model path - check bundled first, then setting, then default locations
         let modelPath = null;
 
-        // Check if user provided a custom path
-        if (this.plugin.settings.whisperModelPath && fs.existsSync(this.plugin.settings.whisperModelPath)) {
+        // 1. Check bundled model (highest priority)
+        if (fs.existsSync(bundledModelPath)) {
+            modelPath = bundledModelPath;
+        }
+        // 2. Check if user provided a custom path
+        else if (this.plugin.settings.whisperModelPath && fs.existsSync(this.plugin.settings.whisperModelPath)) {
             modelPath = this.plugin.settings.whisperModelPath;
-        } else {
-            // Auto-detect from common locations
+        }
+        // 3. Auto-detect from common system locations
+        else {
+            const homeDir = require('os').homedir();
             const possibleModelPaths = [
                 path.join(homeDir, 'Desktop', 'whisper_test', 'whisper.cpp', 'models', 'ggml-base.en.bin'),
                 path.join(homeDir, 'whisper.cpp', 'models', 'ggml-base.en.bin'),
@@ -668,11 +684,11 @@ class StartPageView extends ItemView {
         }
 
         if (!modelPath) {
-            throw new Error('Whisper model not found. Please set the model path in settings or install ggml-base.en.bin.');
+            throw new Error('Whisper model not found. Plugin should include bundled model.');
         }
 
         // Construct whisper command
-        const whisperCommand = `whisper "${audioFilePath}" -m "${modelPath}" -f "${audioFilePath}" -otxt`;
+        const whisperCommand = `"${whisperBinary}" "${audioFilePath}" -m "${modelPath}" -f "${audioFilePath}" -otxt`;
 
         try {
             // Execute whisper transcription
