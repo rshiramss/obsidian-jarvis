@@ -4,6 +4,9 @@ Notes/*.canvas
 Notes/*.webm
 Notes/*.wav
 
+# Ignore transcript notes
+Notes/.transcripts/
+
 # Ignore Obsidian workspace and settings
 Notes/.obsidian/workspace.json
 Notes/.obsidian/app.json

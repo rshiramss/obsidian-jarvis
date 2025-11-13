@@ -529,6 +529,7 @@ class StartPageView extends ItemView {
         const timestamp = Date.now();
         const fileName = `Recording-${timestamp}.wav`;
         const noteFileName = `Recording-${timestamp}.md`;
+        const transcriptFileName = `.transcripts/Transcript-${timestamp}.md`;
 
         try {
             // Convert WebM to 16 kHz mono WAV
@@ -552,16 +553,37 @@ class StartPageView extends ItemView {
                 transcriptionError = error.message;
             }
 
-            // Create note content
-            let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
+            // Create transcript note in hidden folder
+            if (transcriptText || transcriptionError) {
+                // Ensure .transcripts folder exists
+                const transcriptsFolder = this.app.vault.getAbstractFileByPath('.transcripts');
+                if (!transcriptsFolder) {
+                    await this.app.vault.createFolder('.transcripts');
+                }
 
-            if (transcriptText) {
-                content += `## Transcript\n\n${transcriptText}\n\n`;
-            } else if (transcriptionError) {
-                content += `## Transcript\n\n*Transcription failed: ${transcriptionError}*\n\n`;
+                // Create transcript note content with link to audio
+                let transcriptContent = `# Transcript\n\nRecorded: ${new Date().toLocaleString()}\n\n`;
+
+                if (transcriptText) {
+                    transcriptContent += `${transcriptText}\n\n`;
+                } else if (transcriptionError) {
+                    transcriptContent += `*Transcription failed: ${transcriptionError}*\n\n`;
+                }
+
+                transcriptContent += `---\n\nAudio: [${fileName}](${fileName})`;
+
+                // Save transcript note
+                await this.app.vault.create(transcriptFileName, transcriptContent);
             }
 
-            content += `## Audio\n\n[${fileName}](${fileName})`;
+            // Create main recording note with link to transcript
+            let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
+
+            if (transcriptText || transcriptionError) {
+                content += `**Transcript:** [[${transcriptFileName.replace('.md', '')}]]\n\n`;
+            }
+
+            content += `**Audio:** [${fileName}](${fileName})`;
 
             // Save markdown note
             await this.app.vault.create(noteFileName, content);
@@ -796,7 +818,10 @@ class StartPageView extends ItemView {
         const lastOpenFiles = this.app.workspace.getLastOpenFiles();
         const files = this.app.vault.getMarkdownFiles();
 
-        const scored = files.map(file => {
+        // Filter out transcript notes (in .transcripts folder)
+        const visibleFiles = files.filter(file => !file.path.startsWith('.transcripts/'));
+
+        const scored = visibleFiles.map(file => {
             let score = 0;
             const index = lastOpenFiles.indexOf(file.path);
             if (index !== -1) {
