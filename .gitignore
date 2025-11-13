@@ -1,0 +1,34 @@
+# Ignore all notes and personal content
+Notes/*.md
+Notes/*.canvas
+Notes/*.webm
+Notes/*.wav
+
+# Ignore Obsidian workspace and settings
+Notes/.obsidian/workspace.json
+Notes/.obsidian/app.json
+Notes/.obsidian/appearance.json
+Notes/.obsidian/core-plugins.json
+Notes/.obsidian/graph.json
+Notes/.obsidian/community-plugins.json
+
+# Ignore backups
+Notes/.obsidian.backup*/
+
+# Ignore snippets (personal CSS)
+Notes/.obsidian/snippets/
+
+# Ignore plugin settings data
+Notes/.obsidian/plugins/*/data.json
+Notes/.obsidian/plugins/*/backup/
+
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Keep plugin code
+!Notes/.obsidian/plugins/*/main.js
+!Notes/.obsidian/plugins/*/manifest.json
+!Notes/.obsidian/plugins/*/styles.css
