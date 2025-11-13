@@ -1,4 +1,4 @@
-# Obsidian Jarvis - Voice Recording with AI Transcription
+# Obsidian Startpage - Voice Recording with AI Transcription
 
 A self-contained Obsidian plugin that provides voice recording with automatic AI-powered transcription using Whisper.
 
@@ -6,7 +6,7 @@ A self-contained Obsidian plugin that provides voice recording with automatic AI
 
 - **Voice Recording**: Click the Record button to capture audio directly in Obsidian
 - **AI Transcription**: Automatically transcribes your voice recordings using Whisper
-- **Self-Contained**: No external dependencies or setup required - everything is bundled!
+- **Self-Contained**: No external dependencies or setup required - everything is bundled
 - **16 kHz Mono WAV**: Optimized audio format for accurate transcription
 - **Beautiful UI**: Modern, intuitive interface with recent notes, calendar, and tasks
 
@@ -71,11 +71,11 @@ A self-contained Obsidian plugin that provides voice recording with automatic AI
 
 This plugin is completely self-contained:
 
-- ✅ Whisper binary (35 KB)
-- ✅ AI model - ggml-base.en.bin (141 MB)
-- ✅ Plugin code (main.js, manifest.json, styles.css)
+- Whisper binary (35 KB)
+- AI model - ggml-base.en.bin (141 MB)
+- Plugin code (main.js, manifest.json, styles.css)
 
-No external installations required!
+No external installations required.
 
 ## Technical Details
 
