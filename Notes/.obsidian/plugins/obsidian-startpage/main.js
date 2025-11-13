@@ -580,7 +580,9 @@ class StartPageView extends ItemView {
             let content = `# Voice Recording\n\nRecorded: ${new Date().toLocaleString()}\nDuration: ${duration}s\n\n`;
 
             if (transcriptText || transcriptionError) {
-                content += `**Transcript:** [[${transcriptFileName.replace('.md', '')}]]\n\n`;
+                // Extract just the filename without folder path for wiki link
+                const transcriptName = `Transcript-${timestamp}`;
+                content += `**Transcript:** [[${transcriptName}]]\n\n`;
             }
 
             content += `**Audio:** [${fileName}](${fileName})`;
